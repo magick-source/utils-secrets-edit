@@ -1,0 +1,8 @@
+bin/secret-edit.pl
+bin/secret-key-gen.pl
+lib/Secrets.pm
+LICENSE
+Makefile.PL
+MANIFEST
+README.md
+
