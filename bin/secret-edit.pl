@@ -50,13 +50,22 @@ sub edit_secrets {
   } else {
     ($dir,$fname) = ('',$filename);
   }
+  if ( -d '/dev/shm/' ) {
+    $dir      = '/dev/shm/';
+    $fname = "$fname.$$";
+  }
+
   my $edfname = "$dir.$fname.edsec";
   open my $fh, '>', $edfname or die "Error open edit file: $!";
   print $fh $content;
   close $fh;
 
   my $editor = $ENV{EDITOR} || '/usr/bin/vim';
-  system($editor, $edfname);
+  my @extra = ();
+  if ($editor =~ /vim?/) {
+    push @extra, '-n'; # disable swapfile
+  }
+  system($editor, @extra, $edfname);
 
   my $new_content;
   open $fh, '<', $edfname;
