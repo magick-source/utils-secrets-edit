@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w 
+#!/usr/bin/perl -w
 
 use strict;
 use warnings;
@@ -9,10 +9,15 @@ use lib "$Bin/../lib/";
 use Secrets qw(
     load_secrets
     store_secrets
-    key_from_passphrase
   );
 
-use Term::ReadKey;
+use Secrets::Vault qw(
+    key_from_vault
+    get_vault_key
+    get_vault_path
+    empty_vault
+  );
+
 use JSON qw(from_json);
 
 my ($keyname, $filename) = @ARGV;
@@ -29,6 +34,10 @@ help() unless $filename and ( $key or $keyname );
 
 unless ( $key or $ENV{ $keyname } ) {
   $key = key_from_vault( $keyname );
+  unless ( $key ) {
+    print STDERR "ERROR: Can't find key '$keyname'\n";
+    exit 1;
+  }
 }
 
 my $content = $editing_vault ? empty_vault() : '';
@@ -79,65 +88,13 @@ sub edit_secrets {
   return $new_content;
 }
 
-sub key_from_vault {
-  my ($keyname) = @_;
-
-  my $vault_path = get_vault_path();
-  my $vault_key  = get_vault_key( $vault_path );
-  
-  return unless -f $vault_path;
-
-  my $_vault = load_secrets( $vault_key, $vault_path );
-  return unless $_vault;
-
-  my $vault;
-  eval {
-    $vault = from_json( $_vault, { utf8 => 1, relaxed => 1 });
-  } or do {
-    my $err = $@;
-    print STDERR "Error loading vault:\n\t$err\n";
-    exit 1;
-  };
-
-  return $vault->{ $keyname } || '';
-}
-
-sub get_vault_key {
-  my ($fname) = @_;
-  Term::ReadKey::ReadMode('noecho');
-
-  print "Type the passphrase for '$fname': ";
-  my $passphrase = Term::ReadKey::ReadLine(0);
-
-  Term::ReadKey::ReadMode('restore');
-  print "\n";
-
-  my $key = key_from_passphrase( $passphrase );
-
-  return $key;
-}
-
-sub get_vault_path {
-  my $path = $ENV{SRV_VAULT_PATH} || "$ENV{HOME}/.config/.srv.vault";
-
-  return $path;
-}
-
-sub empty_vault {
-  return <<EoV;
-{
-# "KEY_NAME": "HEX_KEY_STRING",
-}
-EoV
-}
-
 sub help {
   print <<EoH;
 Usage:
   $0 <keyname> <filename>  || $0 --my-vault
 
   keyname - the name of the ENV variable where the key is stored
-  
+
   filename - the name of the secrets file to edit
              the file will be created if it does not exit
 
