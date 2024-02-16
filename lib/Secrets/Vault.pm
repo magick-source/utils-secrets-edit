@@ -10,6 +10,8 @@ use Secrets qw(
     load_secrets
   );
 
+use JSON qw(from_json);
+
 use parent 'Exporter';
 our @EXPORT_OK = qw(
   empty_vault
